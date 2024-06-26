@@ -5,7 +5,7 @@ from utils.code.aux_func import seg2bbox, predict
 import os
 import uuid
 from datetime import datetime
-
+import json
 def DeepNipple(image_path, alg_mode, show, save, save_path):
     '''
     :param image_path: input image absolute path
@@ -13,8 +13,20 @@ def DeepNipple(image_path, alg_mode, show, save, save_path):
     :param show: boolean, whether to show the image or not
     :param save: boolean, whether to save the mask or not
     :param save_path: folder to save the mask/bounding boxes
+    :return: dictionary of coordinates and heights of bounding boxes
+    
+    
     :return: segmentation mask / bounding boxes
     '''
+    
+    if os.path.exists(f'{save_path}.json') and os.path.getsize(f'{save_path}.json') > 0:
+        with open(f'{save_path}.json', 'r') as file:
+            # Load existing data
+            rectangles = json.load(file)
+    else:
+        # If the file doesn't exist or is empty, start with an empty dictionary
+        rectangles = {}
+
 
     # Load pytorch model
     learner_path = 'utils/models/base-model/'
@@ -61,31 +73,43 @@ def DeepNipple(image_path, alg_mode, show, save, save_path):
             for coor in coords:
                 y1, y2, x1, x2 = coor[0], coor[1], coor[2], coor[3]
                 cv2.rectangle(image, (x1, y1), (x2, y2), (36, 255, 12), 2, -1)
+                
 
             # Convert image to RGB before showing with matplotlib
-            image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-            plt.imshow(image_rgb)
+            image_rgb = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
+            plt.imshow(image)
             plt.show()
 
-        if save:
-            for idx, coor in enumerate(coords):
-                y1, y2, x1, x2 = coor[0], coor[1], coor[2], coor[3]
+    if save:
+        # Calculate areas and sort to get the two largest boxes
+        areas = [(idx, (coor[1] - coor[0]) * (coor[3] - coor[2])) for idx, coor in enumerate(coords)]
+        largest_two = sorted(areas, key=lambda x: x[1], reverse=True)[:2]
 
-                # Ensure coordinates are within image boundaries
-                if x1 >= image.shape[1] or x2 >= image.shape[1] or y1 >= image.shape[0] or y2 >= image.shape[0]:
-                    print(f"Warning: Invalid bbox coordinates for {image_base_name}_bbox_{idx}.png")
-                    continue  # Skip saving this bbox image
+        for idx, _ in largest_two:
+            coor = coords[idx]
+            y1, y2, x1, x2 = coor[0], coor[1], coor[2], coor[3]
 
-                bbox_image = image[y1:y2, x1:x2]
+            if (image_base_name) not in rectangles:
+                rectangles[(image_base_name)] = []
 
-                # Check if bbox_image is empty or None
-                if bbox_image.size == 0:
-                    print(f"Warning: Empty bbox image for {image_base_name}_bbox_{idx}.png")
-                    continue  # Skip saving this bbox image
+            rectangles[(image_base_name)].append((x1, x2, y1, y2))
+            # Ensure coordinates are within image boundaries
+            if x1 >= image.shape[1] or x2 >= image.shape[1] or y1 >= image.shape[0] or y2 >= image.shape[0]:
+                print(f"Warning: Invalid bbox coordinates for {image_base_name}_bbox_{idx}.png")
+                continue  # Skip saving this bbox image
 
-                # Convert bbox_image to BGR before saving with OpenCV
-                bbox_image_bgr = cv2.cvtColor(bbox_image, cv2.COLOR_RGB2BGR)
-                bbox_save_path = os.path.join(save_path, f'{image_base_name}_bbox_{idx}.png')
-                cv2.imwrite(bbox_save_path, bbox_image_bgr)
+            bbox_image = image[y1:y2, x1:x2]
 
+            # Check if bbox_image is empty or None
+            if bbox_image.size == 0:
+                print(f"Warning: Empty bbox image for {image_base_name}_bbox_{idx}.png")
+                continue  # Skip saving this bbox image
+
+            # Convert bbox_image to BGR before saving with OpenCV
+            bbox_image_bgr = cv2.cvtColor(bbox_image, cv2.COLOR_RGB2BGR)
+            bbox_save_path = os.path.join(save_path, f'{image_base_name}_bbox_{idx}.png')
+            cv2.imwrite(bbox_save_path, bbox_image_bgr)
+
+    with open(f'{save_path}.json', 'w') as f:
+        json.dump(rectangles, f)
     return output
