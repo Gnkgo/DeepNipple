@@ -23,8 +23,8 @@ parser = argparse.ArgumentParser(description='DeepNipple algorithm')
 parser.add_argument('--img_folder', type=str, default = './find_nipples', help='path to the folder containing input images')
 parser.add_argument('--mode', type=str, default='bbox', help='seg or bbox mode')
 parser.add_argument('--show', type=bool, default=False, help='show the output')
-parser.add_argument('--save', type=bool, default=False, help='save the output')
-parser.add_argument('--save_path', type=str, default='./find_nipples', help='path to save the output')
+parser.add_argument('--save', type=bool, default=True, help='save the output')
+parser.add_argument('--save_path', type=str, default='./find_nipples_mask', help='path to save the output')
 
 if __name__ == '__main__':
     print('Running DeepNipple...')

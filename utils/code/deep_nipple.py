@@ -19,13 +19,13 @@ def DeepNipple(image_path, alg_mode, show, save, save_path):
     :return: segmentation mask / bounding boxes
     '''
     
-    if os.path.exists(f'{save_path}.json') and os.path.getsize(f'{save_path}.json') > 0:
-        with open(f'{save_path}.json', 'r') as file:
-            # Load existing data
-            rectangles = json.load(file)
-    else:
-        # If the file doesn't exist or is empty, start with an empty dictionary
-        rectangles = {}
+    # if os.path.exists(f'{save_path}.json') and os.path.getsize(f'{save_path}.json') > 0:
+    #     with open(f'{save_path}.json', 'r') as file:
+    #         # Load existing data
+    #         rectangles = json.load(file)
+    # else:
+    #     # If the file doesn't exist or is empty, start with an empty dictionary
+    #     rectangles = {}
 
 
     # Load pytorch model
@@ -85,31 +85,30 @@ def DeepNipple(image_path, alg_mode, show, save, save_path):
         areas = [(idx, (coor[1] - coor[0]) * (coor[3] - coor[2])) for idx, coor in enumerate(coords)]
         largest_two = sorted(areas, key=lambda x: x[1], reverse=True)[:2]
 
-        for idx, _ in largest_two:
+        # Create a black mask
+        mask = np.zeros(image.shape[:2], dtype=np.uint8)
+
+        for i, (idx, _) in enumerate(largest_two):
             coor = coords[idx]
             y1, y2, x1, x2 = coor[0], coor[1], coor[2], coor[3]
 
-            if (image_base_name) not in rectangles:
-                rectangles[(image_base_name)] = []
-
-            rectangles[(image_base_name)].append((x1, x2, y1, y2))
             # Ensure coordinates are within image boundaries
             if x1 >= image.shape[1] or x2 >= image.shape[1] or y1 >= image.shape[0] or y2 >= image.shape[0]:
-                print(f"Warning: Invalid bbox coordinates for {image_base_name}_bbox_{idx}.png")
+                print(f"Warning: Invalid bbox coordinates for {image_base_name}_bbox_{i}.png")
                 continue  # Skip saving this bbox image
 
-            bbox_image = image[y1:y2, x1:x2]
+            # Draw white rectangles on the mask
+            cv2.rectangle(mask, (x1, y1), (x2, y2), (255), -1)
 
-            # Check if bbox_image is empty or None
-            if bbox_image.size == 0:
-                print(f"Warning: Empty bbox image for {image_base_name}_bbox_{idx}.png")
-                continue  # Skip saving this bbox image
+        # Save the mask image
+        mask_save_path = os.path.join(save_path, f'{image_base_name}.png')
+        cv2.imwrite(mask_save_path, mask)
 
-            # Convert bbox_image to BGR before saving with OpenCV
-            bbox_image_bgr = cv2.cvtColor(bbox_image, cv2.COLOR_RGB2BGR)
-            bbox_save_path = os.path.join(save_path, f'{image_base_name}_bbox_{idx}.png')
-            cv2.imwrite(bbox_save_path, bbox_image_bgr)
+        # # Optionally, show the mask
+        # plt.imshow(mask, cmap='gray')
+        # plt.show()
 
-    with open(f'{save_path}.json', 'w') as f:
-        json.dump(rectangles, f)
-    return output
+
+    # with open(f'{save_path}.json', 'w') as f:
+    #     json.dump(rectangles, f)
+    # return output
