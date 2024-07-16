@@ -1,9 +1,20 @@
 import numpy as np
-import imgaug.augmenters as iaa
+import cv2
+print(cv2.__version__)
+try:
+    import imgaug as ia
+    from imgaug import augmenters as iaa
+    print("imgaug imported successfully")
+except ImportError as e:
+    print(f"ImportError: {e}")
+except Exception as e:
+    print(f"Exception: {e}")
+
 import cv2
 import os
 from glob import glob
 
+print ("Hello World")
 # Define the augmentation sequences
 sometimes = lambda aug: iaa.Sometimes(0.5, aug)
 
@@ -69,7 +80,7 @@ def process_folders(input_img_dir1, input_img_dir2, output_img_dir1, output_img_
 # Example usage
 input_img_directory1 = 'find_nipples'
 input_img_directory2 = 'find_nipples_mask'
-output_img_directory1 = 'augmented_images'
-output_img_directory2 = 'augmented_masks'
+output_img_directory1 = 'augm_test'
+output_img_directory2 = 'augm_test_mask'
 
 process_folders(input_img_directory1, input_img_directory2, output_img_directory1, output_img_directory2)
